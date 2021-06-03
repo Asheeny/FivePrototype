@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: ac0dbe4f80b9885468cabc76e36b44a1
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Gabriola
+  fontNames:
+  - Gabriola
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 982afa603a5ae5f4aa514c7a67117544, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
