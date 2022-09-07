@@ -15,7 +15,6 @@ public class BlockingCamera : MonoBehaviour
         blockingCamera.Clear();
         Ray ray = new Ray(transform.position, player.transform.position - transform.position);
         RaycastHit[] hits = Physics.RaycastAll(ray, Vector3.Distance(player.transform.position, transform.position));
-            //Physics.RaycastAll(transform.position, transform.forward, Vector3.Distance(player.transform.position, transform.position));
         
         foreach(RaycastHit hit in hits)
         {

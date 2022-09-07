@@ -6,18 +6,7 @@ using Cinemachine;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField]
-    private float speed = 0f;
-    private Vector3 moveInput = new Vector3();
-
-    [SerializeField]
-    private CameraShake cShake = null;
-    [SerializeField]
-    private CinemachineVirtualCamera cam = null;
-
-    private Rigidbody rB;
-    private Animator anim;
-
-    private bool isGrounded = true;
+    private float maxSpeed = 0f;
     [SerializeField]
     private LayerMask whatIsGround = new LayerMask();
     [SerializeField]
@@ -32,83 +21,98 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     Transform groundCheck = null;
 
+    private Rigidbody rB;
+    private Animator anim;
+    private AudioController audioController;
+
+    private Vector3 moveInput = new Vector3();
+    private float playerRot = 0f;
+    private bool isGrounded = true;
     private bool stunned = false;
-    private bool jumping= false;
-    private bool holdingJump= false;
+    private bool tryToJump = false;
+    private bool holdingJump = false;
 
     void Awake()
     {
         rB = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
-    }
-
-    private void Start()
-    {
-        transform.position = startPos.position;
+        audioController = FindObjectOfType<AudioController>();
     }
 
     private void Update()
     {
+        isGrounded = Physics.CheckSphere(groundCheck.position, 0.2f, whatIsGround);
+        Vector3 tempPlayerRot = moveInput;
+        if(!moveInput.magnitude.Equals(0))
+            playerRot = Mathf.Atan2(tempPlayerRot.x, tempPlayerRot.z) * Mathf.Rad2Deg;
+
         if (stunned)
         {
             anim.SetBool("isStunned", true);
             anim.SetTrigger("stun");
+            moveInput = Vector3.zero;
+            tryToJump = false;
+            holdingJump = false;
             return;
         }
         else
         {
             anim.SetBool("isStunned", false);
         }
-
-        if (Physics.CheckSphere(groundCheck.position, 0.5f, whatIsGround))
-        {
-            isGrounded = true;
-        }
-        else
-        {
-            isGrounded = false;
-        }
-
+        
         moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
-        jumping = Input.GetButtonDown("Jump");
+        tryToJump = Input.GetButtonDown("Jump");
         holdingJump = Input.GetButton("Jump");
+    }
+    
+    private void FixedUpdate()
+    {
+        Jumping();
+        Movement();
+    }
 
+    private void InAirAdjustment()
+    {
         if (rB.velocity.y < 0)
         {
             // - 1 to fall multiplier accounts for existing unity physics
-            rB.velocity += Vector3.up * Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+            rB.velocity += Vector3.up * Physics.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
         }
-        else if (rB.velocity.y < 0 && !holdingJump)
+        else if (rB.velocity.y > 0 && !holdingJump)
         {
-            rB.velocity += Vector3.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+            rB.velocity += Vector3.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
         }
-
-        Movement();
-        Jumping(); 
     }
 
     private void Jumping()
     {
-        if (jumping && isGrounded)
-        {
+        if (tryToJump && isGrounded)
+        {          
+            rB.AddForce(Vector3.up * jForce, ForceMode.Impulse);
+
+            isGrounded = false;
+            tryToJump = false;
+
             anim.SetBool("isJumping", true);
             anim.SetTrigger("startJump");
-            FindObjectOfType<AudioController>().Play("Jump", Random.Range(0.9f, 1.1f));
 
-            rB.velocity = jForce * Vector3.up;
+            audioController.Play("Jump", Random.Range(0.9f, 1.1f));
         }
         else
         {
             anim.SetBool("isJumping", false);
         }
+
+        InAirAdjustment();
     }
 
     private void Movement()
     {
-        rB.MoveRotation(Quaternion.Euler(0, cam.transform.rotation.y * 180, 0));
-        rB.MovePosition(transform.position + (transform.TransformDirection(moveInput) * speed * Time.deltaTime));
+        rB.rotation = Quaternion.Slerp(rB.rotation, Quaternion.Euler(0, playerRot, 0), 0.45f);
 
-        if (moveInput.magnitude == 0)
+        rB.MovePosition(transform.position + moveInput * maxSpeed * Time.deltaTime);
+
+        if (moveInput.magnitude.Equals(0))
         {
             anim.SetBool("isMoving", false);
         }
@@ -118,13 +122,9 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public IEnumerator Stun(Vector3 knockBackDir, float force)
+    public IEnumerator Stun(float force)
     {
         stunned = true;
-        StartCoroutine(cShake.Shake(0.15f, 0.16f));
-
-        rB.AddRelativeForce(new Vector3(knockBackDir.x * -force, knockBackDir.y * 50, knockBackDir.z * -force));
-
         yield return new WaitForSeconds(1f);
         stunned = false;
     }
@@ -141,7 +141,7 @@ public class PlayerController : MonoBehaviour
 
     public bool DetectMovement()
     {
-        if (Input.GetButton("Jump") || moveInput.Equals(0))
+        if (Input.GetButton("Jump") || !moveInput.magnitude.Equals(0))
         {
             return true;
         }
@@ -149,5 +149,13 @@ public class PlayerController : MonoBehaviour
         {
             return false;
         }
+    }
+
+    public void ResetPlayer()
+    {
+        moveInput = Vector3.zero;
+        gameObject.SetActive(true);
+        SetStun(false);
+        transform.position = startPos.position;
     }
 }

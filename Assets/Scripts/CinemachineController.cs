@@ -6,21 +6,21 @@ using Cinemachine;
 public class CinemachineController : MonoBehaviour
 {
     [SerializeField]
-    private CinemachineVirtualCamera cam1 = null;
+    private CinemachineVirtualCamera followCam = null;
     [SerializeField]
-    private CinemachineVirtualCamera cam2 = null;
+    private CinemachineVirtualCamera overCam = null;
 
     public void SwitchPriority(bool overworld)
     {
         if(overworld)
         {
-            cam1.Priority = 0;
-            cam2.Priority = 1;
+            followCam.Priority = 0;
+            overCam.Priority = 1;
         }
         else
         {
-            cam1.Priority = 1;
-            cam2.Priority = 0;
+            followCam.Priority = 1;
+            overCam.Priority = 0;
         }
     }
 }

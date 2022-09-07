@@ -4,20 +4,20 @@ using UnityEngine;
 
 public class ExitController : MonoBehaviour
 {
-    private GameController controller;
+    private GameController gameController = null;
 
     void Awake()
     {
-        controller = FindObjectOfType<GameController>();
+        gameController = FindObjectOfType<GameController>();
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerEnter(Collider collision)
     {
         try
         {
             if (collision.gameObject.CompareTag("Player"))
             {
-                StartCoroutine(controller.StageIncrement(0f, false));
+                StartCoroutine(gameController.StageIncrement(3f, false));
             }
         }
         catch (System.NullReferenceException ex)

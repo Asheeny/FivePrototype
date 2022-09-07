@@ -5,15 +5,8 @@ using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
-    //[SerializeField]
-    //private List<GameObject> stages = null;
-    //[SerializeField]
-    //private List<GameObject> obstaclePrefabs = null;
-
     private int curStage = 0;
     [SerializeField]
-    private GameObject stagePrefab = null;
-
     private GameObject stage = null;
 
     [SerializeField]
@@ -22,12 +15,11 @@ public class GameController : MonoBehaviour
     private bool started = false;
     [SerializeField]
     private PlayerController player = null;
-    private Vector3 startingPos;
     [SerializeField]
     private ParticleSystem deathEffect = null;
 
     [SerializeField]
-    private Text cDown = null;
+    private GameObject cDown = null;
     private const float maxTime = 5;
     private float timer;
     private bool canCount = true;
@@ -37,11 +29,22 @@ public class GameController : MonoBehaviour
     private GameObject lvlComplete = null;
     private bool complete = false;
 
+    private CinemachineController cinemachineController = null;
+    private List<StageComponent> stageComponents = new List<StageComponent>();
+
+    private void Awake()
+    {
+        cinemachineController = FindObjectOfType<CinemachineController>();
+    }
+
     void Start()
     {
-        startingPos = new Vector3(-7.6f, -1.822276f, 0.0f);
-        stage = stagePrefab;
-        LoadStage();
+        foreach (StageComponent sC in stage.GetComponentsInChildren<StageComponent>(true))
+        {
+            stageComponents.Add(sC);
+        }
+
+        StartCoroutine(StageIncrement(3f, false));
     }
 
     void Update()
@@ -55,7 +58,7 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            cDown.text = ToRoman(timer.ToString("F0"));
+            //cDown.text = ToRoman(timer.ToString("F0"));
         }
 
         if (player.DetectMovement() && player.isActiveAndEnabled)
@@ -69,7 +72,9 @@ public class GameController : MonoBehaviour
         if (timer >= 0.0f && canCount)
         {
             timer -= Time.deltaTime;
-            cDown.text = ToRoman(timer.ToString("F0"));
+            //cDown.text = ToRoman(timer.ToString("F0"));
+            //if(timer > 2)
+            //    cDown.GetComponentInParent<Animator>().SetTrigger("SwitchTimer");
         }
         else if (timer <= 0.0f && !doOnce && canFail)
         {
@@ -111,12 +116,12 @@ public class GameController : MonoBehaviour
         {
             curStage++;
         }
-
-        foreach(StageComponent sC in stage.GetComponentsInChildren<StageComponent>(true))
+        
+        foreach(StageComponent sC in stageComponents)
         {
             if(sC.GetActiveFromStage() <= curStage)
-            {
-                sC.gameObject.SetActive(true);
+            {          
+                sC.transform.gameObject.SetActive(true);
             }
         }
 
@@ -125,22 +130,16 @@ public class GameController : MonoBehaviour
             timer = maxTime;
             started = false;
         }
-
-        if (!player.gameObject.activeSelf)
-        {
-            player.gameObject.SetActive(true);
-            player.SetStun(false);
-            player.transform.position = startingPos;
-        }
     }
 
     public IEnumerator StageIncrement(float delay, bool failed)
     {
+        cinemachineController.SwitchPriority(true);
         player.gameObject.SetActive(false);
+
         if (!failed)
         {
             FindObjectOfType<AudioController>().Play("Portal_Enter");
-            yield return new WaitForSeconds(delay);
             if (curStage == 10)
             {
                 LevelComplete();
@@ -150,21 +149,24 @@ public class GameController : MonoBehaviour
         {
             Destroy(Instantiate(deathEffect, player.transform.position, Quaternion.identity), delay);
             FindObjectOfType<AudioController>().Play("Player_Death");
-            yield return new WaitForSeconds(delay);
         }
 
         canCount = true;
         doOnce = false;
-        player.enabled = false;
+
         LoadStage();
-        yield return new WaitForSeconds(0.5f);
-        player.enabled = true;
+        yield return new WaitForSeconds(delay);
+        if(!complete)
+        {
+            cinemachineController.SwitchPriority(false);
+            player.ResetPlayer();
+        }
     }
 
     private void LevelComplete()
     {
         complete = true;
-        cDown.GetComponent<Animator>().SetBool("lvlComp", true);
+        //cDown.GetComponent<Animator>().SetBool("lvlComp", true);
         Instantiate(lvlComplete, new Vector3(0, 2.5f, 0), Quaternion.identity);
     }
 }
